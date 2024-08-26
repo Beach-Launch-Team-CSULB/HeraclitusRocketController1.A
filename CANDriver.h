@@ -13,7 +13,7 @@
 class CANDriver 
 {
     private:
-        FlexCAN_T4<CAN1, RX_SIZE_16, TX_SIZE_16> Can0 = FlexCAN_T4<CAN1, RX_SIZE_16, TX_SIZE_16>();
+        FlexCAN_T4<CAN2, RX_SIZE_16, TX_SIZE_16> Can0 = FlexCAN_T4<CAN2, RX_SIZE_16, TX_SIZE_16>();
         std::vector<uint8_t> commands;
         
     public:

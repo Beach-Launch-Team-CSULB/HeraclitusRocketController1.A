@@ -46,17 +46,10 @@ Rocket::Rocket(int ALARA){
     stateMap.emplace(IGN1_ID, std::vector<int>{0,   0,   1,   0,    0,   0,   1,   0});
     stateMap.emplace(IGN2_ID, std::vector<int>{0,   0,   1,   0,    0,   0,   1,   0});
 
-    //LEDstateMap.emplace(LED0,    std::vector<Color>{GREEN, PURPLE, RED, ORANGE, ORANGE, WHITE, ORANGE, GREEN});
-    //LEDstateMap.emplace(LED1,    std::vector<Color>{PURPLE, PURPLE, RED, GREEN, BLUE, WHITE, ORANGE, GREEN});
-
-    // Begins in the Test state
+    // Begins in the Standby state
     changeState(STANDBY);
     manualVent = false;
 }
-
-/*float Rocket::sensorRead(Sensor sensor) {
-    return sensor.readDataRaw();
-}*/
 
 float Rocket::sensorRead(int sensorId, ADC &adc) {
     // 4/15: After we get this working - check how many times it is logging.
@@ -203,34 +196,11 @@ bool Rocket::initializeLowerSensors()
     return true;
 }
 
-// 4/14: New attempt
-void Rocket::zeroSensors(int node)
+// 6/3: New attempt
+void Rocket::zeroSensors(ADC &adc)
 {
-    if(node == 1)
-    {
-        // ******* 4/15: Put this back to how it was before. Right now - this works - but I was initially using the sensor class
-        // and not global variables. I messed something up in the main logic and the function was not getting called correctly.
-        // Propulsion Node
-        /*zeroPTOne   = sensorRead(PT_LOX_HIGH_ID);
-        zeroPTTwo   = sensorRead(PT_FUEL_HIGH_ID);
-        zeroPTThree = sensorRead(PT_LOX_DOME_ID);
-        zeroPTFour  = sensorRead(PT_FUEL_DOME_ID);
-
-        zeroPTFive  = sensorRead(PT_LOX_TANK_1_ID);
-        zeroPTSix   = sensorRead(PT_LOX_TANK_2_ID);
-        zeroPTSeven = sensorRead(PT_FUEL_TANK_1_ID);
-        zeroPTEight = sensorRead(PT_FUEL_TANK_2_ID);
-    }
-    else
-    {
-        // Engine Node
-        zeroPTOne   = sensorRead(PT_PNUEMATICS_ID);
-        zeroPTTwo   = sensorRead(PT_LOX_INLET_ID);
-        zeroPTThree = sensorRead(PT_FUEL_INLET_ID);
-        zeroPTFour  = sensorRead(PT_FUEL_INJECTOR_ID);
-
-        zeroPTFive  = sensorRead(PT_CHAMBER_1_ID);
-        zeroPTSix   = sensorRead(PT_CHAMBER_2_ID);*/
-    }
+    for (std::map<int,Sensor>::iterator sensor = sensorMap.begin(); sensor != sensorMap.end(); ++sensor) {
+        sensor->second.setCalibrationParametersB(-1 * sensor->second.getCurrentValue(adc));
+    }    
 }
 
