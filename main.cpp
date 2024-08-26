@@ -14,7 +14,6 @@
 #include <ADC.h>
 #include <ADC_util.h>
 
-
 #include <FlexCAN_T4.h>
 #include "CANDriver.h"
 #include <cstdint>
@@ -24,14 +23,14 @@
 
 int alara = ALARA_ID;
 File onBoardLog;
-char* fileLogName = "SoftwareTest-04-15-2024.txt";
+char* fileLogName = "ARALA_SD_Data_Dump.csv";
 bool sd_write = false;
 Rocket myRocket = Rocket(alara);
 LEDController allOfTheLights;
 
-const int CAN2busSpeed = 1000000;
+const int CAN2busSpeed = 125000;
 CANDriver theSchoolBus = CANDriver();
-FlexCAN_T4 Can0 = FlexCAN_T4<CAN1, RX_SIZE_16, TX_SIZE_16>();
+FlexCAN_T4 Can0 = FlexCAN_T4<CAN2, RX_SIZE_16, TX_SIZE_16>();
 
 uint32_t lastPing; 
 uint32_t lastPingRecieved;         
@@ -74,8 +73,8 @@ int manualVentCommandIds[] = {12, 13, 16, 17, 18, 19, 24, 25, 26, 27};
 
 void start_sd_log();
 void executeCommand(uint32_t commandID);
-std::string generateSDReport();
-void CANroutine(char*);
+std::string generateSDReport(char*);
+void CANroutine(uint32_t);
 void fireRoutine();
 void executeCommand(uint32_t);
 void MCUADCSetup(ADC&, ADC_REFERENCE, ADC_REFERENCE, uint8_t, uint8_t);
@@ -208,7 +207,7 @@ void executeCommand(uint32_t commandID) {
     {
         if(calibratedPTs == true)
         {
-            myRocket.zeroSensors(alara);
+            myRocket.zeroSensors(*adc);
             calibratedPTs = false; 
         }
         else
@@ -216,12 +215,10 @@ void executeCommand(uint32_t commandID) {
             // Go fish.
         }
     }
-    else if (commandID == GET_B_VAL || commandID == GET_M_VAL) {
+    else if (commandID == GET_B_VAL || commandID == GET_M_VAL) 
         theSchoolBus.sendSensorCalibration(calibIsM, sensorCalibID, myRocket.getSensorCalibration(sensorCalibID, calibIsM));
-    }
-    else if (commandID == SET_B_VAL || commandID == SET_M_VAL) {
+    else if (commandID == SET_B_VAL || commandID == SET_M_VAL) 
         myRocket.calibrateSensor(sensorCalibID, calibIsM, calibVal);
-    }
     else if (commandID == GET_LMV_OPEN)
         theSchoolBus.sendTiming(SEND_LMV_OPEN);
     else if (commandID == GET_FMV_OPEN)
@@ -261,13 +258,12 @@ void MCUADCSetup(ADC& adc, ADC_REFERENCE refIn0, ADC_REFERENCE refIn1, uint8_t a
 }
 
 void safetyChecks() 
-{   // Lox pressure reading (?)
-    // This will be longer than two minutes.
+{   
     if(lastPing > 600000) 
         myRocket.changeState(VENT);
 }
 
-int last_light;
+
 void setup() {
     
     Serial.begin(9600);
@@ -276,25 +272,18 @@ void setup() {
     SPI.begin();
     Can0.begin();
     start_sd_log();
-    pinMode(33, OUTPUT);
     Can0.setBaudRate(CAN2busSpeed);
     
     myRocket = Rocket(alara);
     allOfTheLights = LEDController(LED_PIN_1, LED_PIN_2, LED_PIN_3);
-    //allOfTheLights.setLed(0);
-
-    //Can0.begin(CAN2busSpeed);
-    //Can0.setTxBufferSize(64);
 
     lastPing = 0;
-    last_light = millis();
 
-    // Do we want default values?
     ignitionTime = 0;
-    LMVOpenTime = 1000;
-    FMVOpenTime = 2000;
-    LMVCloseTime = 3000;
-    FMVCloseTime = 4000;
+    LMVOpenTime = 0;
+    FMVOpenTime = 0;
+    LMVCloseTime = 2000;
+    FMVCloseTime = 2000;
 
     calibIsM = false;
     calibVal = 0.0;
@@ -308,21 +297,24 @@ void setup() {
     uint8_t averages0 = 4;
     uint8_t averages1 = 4;
     MCUADCSetup(*adc, ref0, ref1, averages0, averages1);
+    pinMode(2, OUTPUT);
+}
 
-    }
-int i = 0;
+int i = 4;
 void loop() {
-    while(true) {
-        allOfTheLights.setLed(++i%8);
-        delay(1000);
+    //allOfTheLights.setLed(++i%8);
+    //delay(500);
+    //myRocket.setValveOn((i% 12) + 4, !myRocket.valveRead((i%12) + 4));
+    //delay(500);
+    //myRocket.setValveOn((i% 12) + 4, !myRocket.valveRead((i%12) + 4));
+    //i++;
      
     static CAN_message_t msg;
     msg.id = 100;
-    Can0.write(msg);
-    //lastPing = millis() - lastPingRecieved;
-    //executeCommand(theSchoolBus.readMessage());
-    //CANRoutine(millis());
+    //Can0.write(msg);
+    lastPing = millis() - lastPingRecieved;
+    executeCommand(theSchoolBus.readMessage());
+    CANRoutine(millis());
     writeSDReport(fileLogName);
-    //safetyChecks();*/
-    }
+    safetyChecks();
 }
